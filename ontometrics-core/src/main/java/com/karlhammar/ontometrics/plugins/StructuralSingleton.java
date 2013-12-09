@@ -63,6 +63,11 @@ public class StructuralSingleton {
 	    return ref;
 	}
 
+	public static synchronized void reset() {
+	    // FIXME: This is hacktastic and horrible
+	    ref = null;
+	}
+
 	/**
 	 * Don't try this!
 	 */

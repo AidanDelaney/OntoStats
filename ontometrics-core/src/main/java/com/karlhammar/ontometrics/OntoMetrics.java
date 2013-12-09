@@ -15,6 +15,8 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.Parser;
 import org.apache.commons.cli.PosixParser;
 
+import com.karlhammar.ontometrics.plugins.StructuralSingleton;
+import com.karlhammar.ontometrics.plugins.StructuralSingletonOWLAPI;
 import com.karlhammar.ontometrics.plugins.api.OntoMetricsPlugin;
 import com.karlhammar.ontometrics.plugins.api.PluginService;
 import com.karlhammar.ontometrics.plugins.api.PluginServiceFactory;
@@ -72,26 +74,27 @@ public class OntoMetrics {
 		if (cl.hasOption("l")) {
 			printPluginsAndQuit();
 		}
-		
-		// Initialize the plugins and results map
-		PluginService pluginService = PluginServiceFactory.createPluginService();
-        Map<String,String> results = new HashMap<String, String>();
 
         Vector<File> files = new Vector<File>();
 		// Check that either -f or -b are specified on the CLI
         if(cl.hasOption("f")) {
-            addFile(cl, files, cl.getOptionValue("f"));
+            addFile(files, cl.getOptionValue("f"));
         }
 
         if(cl.hasOption("b")) {
             for(String file: cl.getOptionValues("b")) {
-                addFile(cl, files, file);
+                addFile(files, file);
             }
         }
 
         // I hate these kind of flags.  TODO: Remove first run flag.
         boolean first = true;
         for(File ontologyFile : files) {
+            // Initialize the plugins and results map
+            // Must re-init pluginService on each execution of the loop.
+            PluginService pluginService = PluginServiceFactory.createPluginService();
+            Map<String,String> results = new HashMap<String, String>();
+            
             // Execute each plugin in turn
             // TODO: What happens if two plugins share abbreviation?
             Iterator<OntoMetricsPlugin> plugins = pluginService.getPlugins();
@@ -136,11 +139,14 @@ public class OntoMetrics {
                 first = false;
             }
             System.out.println(metricValues);
+
+            StructuralSingleton.reset();
+            StructuralSingletonOWLAPI.reset();
         }
 	}
 	
-	private static void addFile(CommandLine cl, Vector<File> files, String path) {
-	    File ontologyFile=new File(cl.getOptionValue("f"));
+	private static void addFile(Vector<File> files, String path) {
+	    File ontologyFile=new File(path);
 	    if (!ontologyFile.exists()) {
 	        System.err.println("File " + path + " does not exist.");
 	        System.err.flush();

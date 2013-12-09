@@ -4,8 +4,11 @@ import java.io.File;
 import java.util.logging.Logger;
 
 import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.io.FileDocumentSource;
+import org.semanticweb.owlapi.model.MissingImportHandlingStrategy;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
+import org.semanticweb.owlapi.model.OWLOntologyLoaderConfiguration;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
 
@@ -28,9 +31,21 @@ public class StructuralSingletonOWLAPI {
 	 * @param ontologyFile
 	 */
 	private StructuralSingletonOWLAPI(File ontologyFile) {
+	    this(ontologyFile, false);
+	}
+
+	private StructuralSingletonOWLAPI(File ontologyFile, boolean ignoreImports) {
 		try {
+		    OWLOntologyLoaderConfiguration config = new OWLOntologyLoaderConfiguration();
+		    config.setMissingImportHandlingStrategy(MissingImportHandlingStrategy.SILENT);
 			OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-			this.ontology = manager.loadOntologyFromOntologyDocument(ontologyFile);
+			this.ontology = manager.loadOntologyFromOntologyDocument(new FileDocumentSource(ontologyFile), config);
+			if(ignoreImports) {
+			    // remove all imports
+			    for(OWLOntology imported: manager.getDirectImports(ontology)) {
+			        manager.removeOntology(imported);
+			    }
+			}
 		}
 		catch (OWLOntologyCreationException e) {
 			logger.severe(e.getMessage());
@@ -57,6 +72,18 @@ public class StructuralSingletonOWLAPI {
 		}
 		return ref;
 	}
+
+	public static synchronized StructuralSingletonOWLAPI getSingletonObject(File ontologyFile, boolean ignoreImports) {
+        if (ref == null) {
+            ref = new StructuralSingletonOWLAPI(ontologyFile, ignoreImports);
+        }
+        return ref;
+    }
+	
+   public static synchronized void reset() {
+        // FIXME: This is hacktastic and horrible
+        ref = null;
+    }
 
 	/**
 	 * Don't try this!
